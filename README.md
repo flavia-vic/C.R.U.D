@@ -29,6 +29,6 @@ A aplicação Flask utiliza a classe Database para criar uma API RESTful que ofe
 ## Configuração e Execução
 Para executar o projeto localmente:
 
-Instale as bibliotecas necessárias.
-Execute o arquivo main.py.
-Acesse os endpoints definidos para realizar operações no banco de dados, podendo ser acessados com ferramentas como Postman e Insomnia.
+- Instale as bibliotecas necessárias.
+- Execute o arquivo main.py.
+- Acesse os endpoints definidos para realizar operações no banco de dados, podendo ser acessados com ferramentas como Postman e Insomnia.
