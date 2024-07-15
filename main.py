@@ -1,140 +1,115 @@
-import mysql.connector
-from mysql.connector import Error
+from con import Database
+from flask import Flask, jsonify, request, Response
+from flask_cors import CORS
+import json
 
-# Função para conectar ao banco de dados
-def connect_to_database():
+app = Flask(__name__)
+CORS(app)
+
+db = None  # Remova o uso de variáveis globais desnecessárias
+
+@app.route('/conectar', methods=['POST'])
+def conectar():
     try:
-        connection = mysql.connector.connect(
-            host="192.168.1.10",
-            user="pi",
-            password="raspberry",
-            database="random"
-        )
-        if connection.is_connected():
-            print("Conexão bem-sucedida!")
-            return connection
-    except Error as e:
-        print(f"Erro ao conectar ao banco de dados: {e}")
-        return None
+        global db
+        if db is None:
+            user = request.form.get('user', 'pi')
+            passwd = request.form.get('passwd', 'raspberry')
+            database = request.form.get('database', 'random')
+            db = Database(user=user, passwd=passwd, database=database)
+            teste = db.conectar()
 
-# Função para fechar a conexão
-def close_connection(connection):
-    if connection.is_connected():
-        connection.close()
-        print("Conexão fechada.")
+            if teste is True:
+                return Response(json.dumps({'message': "Conectado"}), status=200)
+            else:
+                return Response(json.dumps(teste), status=500)
+        else:
+            return Response(json.dumps({"message": "Já conectado ao banco de dados."}), status=400)
+    except Exception as e:
+        return Response(json.dumps({"error": str(e)}), status=500)
 
-# Função para criar uma tabela
-def create_table():
-    connection = connect_to_database()
-    if connection:
-        cursor = connection.cursor()
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS estudantes (
-            NAME VARCHAR(20) NOT NULL,
-            BRANCH VARCHAR(50),
-            ROLL INT NOT NULL,
-            SECTION VARCHAR(5),
-            AGE INT
-        )
-        """
-        cursor.execute(create_table_query)
-        connection.commit()
-        close_connection(connection)
+@app.route('/ler', methods=['GET'])
+def ler_todos_os_estudantes():
+    try:
+        global db
+        if db:
+            students = db.read_students()
+            if isinstance(students, dict) and "error" in students:
+                return Response(json.dumps(students), status=500)
+            return jsonify({"estudantes": students})
+        else:
+            return Response(json.dumps({"message": "Cliente não conectado."}), status=503)
+    except Exception as e:
+        return Response(json.dumps({"error": str(e)}), status=500)
 
-# Função para inserir um único registro
-def insert_single_record():
-    connection = connect_to_database()
-    if connection:
-        cursor = connection.cursor()
-        sql = "INSERT INTO estudantes (NAME, BRANCH, ROLL, SECTION, AGE) VALUES (%s, %s, %s, %s, %s)"
-        val = ("Ram", "CSE", 85, "B", 19)
-        cursor.execute(sql, val)
-        connection.commit()
-        close_connection(connection)
+@app.route('/ler_por_pagina', methods=['GET'])
+def ler_por_pagina():
+    try:
+        global db
+        if db:
+            page = request.args.get('page', 1)
+            per_page = request.args.get('per_page', 10)
+            students, total_records = db.read_students_paginate(page=int(page), per_page=int(per_page))
+            if isinstance(students, dict) and "error" in students:
+                return Response(json.dumps(students), status=500)
+            response_data = {
+                "estudantes": students,
+                "total_records": total_records
+            }
+            return jsonify(response_data)
+        else:
+            return Response(json.dumps({"message": "Cliente não conectado."}), status=503)
+    except Exception as e:
+        return Response(json.dumps({"error": str(e)}), status=500)
 
-# Função para inserir múltiplos registros
-def insert_multiple_records():
-    connection = connect_to_database()
-    if connection:
-        cursor = connection.cursor()
-        sql = "INSERT INTO estudantes (NAME, BRANCH, ROLL, SECTION, AGE) VALUES (%s, %s, %s, %s, %s)"
-        val = [
-            ("Nikhil", "CSE", 98, "A", 18),
-            ("Nisha", "CSE", 99, "A", 18),
-            ("Rohan", "MAE", 43, "B", 20),
-            ("Amit", "ECE", 24, "A", 21),
-            ("Anil", "MAE", 45, "B", 20),
-            ("Megha", "ECE", 55, "A", 22),
-            ("Sita", "CSE", 95, "A", 19)
-        ]
-        cursor.executemany(sql, val)
-        connection.commit()
-        close_connection(connection)
+@app.route('/atualizar_estudante/<int:student_id>', methods=['PUT'])
+def atualizar_estudante(student_id):
+    try:
+        global db
+        if db:
+            data = request.get_json()
+            resultado_atualizacao = db.atualizar_estudante_no_banco(student_id, data)
 
-# Função para buscar dados
-def fetch_data():
-    connection = connect_to_database()
-    if connection:
-        cursor = connection.cursor()
-        query = "SELECT NAME, ROLL FROM estudantes"
-        cursor.execute(query)
-        results = cursor.fetchall()
-        for row in results:
-            print(row)
-        close_connection(connection)
+            if resultado_atualizacao is True:
+                return Response(json.dumps({'message': "Estudante atualizado com sucesso."}), status=200)
+            else:
+                return Response(json.dumps({"error": resultado_atualizacao}), status=500)
+        else:
+            return Response(json.dumps({"message": "Cliente não conectado ao banco de dados."}), status=503)
+    except Exception as e:
+        return Response(json.dumps({"error": str(e)}), status=500)
 
-# Função para buscar dados com filtro
-def fetch_data_with_condition():
-    connection = connect_to_database()
-    if connection:
-        cursor = connection.cursor()
-        query = "SELECT * FROM estudantes WHERE AGE >= 20"
-        cursor.execute(query)
-        results = cursor.fetchall()
-        for row in results:
-            print(row)
-        close_connection(connection)
+@app.route('/deletar-por-id/<int:id>', methods=['DELETE'])
+def deletar_estudante(id):
+    try:
+        global db
+        if db:
+            resultado_delecao = db.deletar_estudante(id)
+            if resultado_delecao is True:
+                return Response(json.dumps({"message": "aluno deletado com sucesso"}), status=200)
+            else:
+                return Response(json.dumps({"error": resultado_delecao}), status=500)
+        else:
+            return Response(json.dumps({"message": "Cliente não conectado ao banco de dados."}), status=503)
+    except Exception as e:
+        return Response(json.dumps({"error": str(e)}), status=500)
 
-# Função para atualizar dados
-def update_data():
-    connection = connect_to_database()
-    if connection:
-        cursor = connection.cursor()
-        query = "UPDATE estudantes SET AGE = 23 WHERE NAME = 'Ram'"
-        cursor.execute(query)
-        connection.commit()
-        close_connection(connection)
+@app.route('/inserir-estudante', methods=['POST'])
+def inserir_estudante():
+    try:
+        global db
+        if db:
+            data = request.get_json()
+            resultado_da_insercao = db.inserir_estudante(data)
 
-# Função para deletar dados
-def delete_data():
-    connection = connect_to_database()
-    if connection:
-        cursor = connection.cursor()
-        query = "DELETE FROM estudantes WHERE NAME = 'Ram'"
-        cursor.execute(query)
-        connection.commit()
-        close_connection(connection)
+            if resultado_da_insercao is True:
+                return Response(json.dumps({"message": "aluno inserido com sucesso"}), status=200)
+            else:
+                return Response(json.dumps({"error": resultado_da_insercao}), status=500)
+        else:
+            return Response(json.dumps({"message": "Cliente não conectado ao banco de dados."}), status=503)
+    except Exception as e:
+        return Response(json.dumps({"error": str(e)}), status=500)
 
-# Função para deletar tabela
-def drop_table():
-    connection = connect_to_database()
-    if connection:
-        cursor = connection.cursor()
-        query = "DROP TABLE IF EXISTS estudantes"
-        cursor.execute(query)
-        connection.commit()
-        close_connection(connection)
-
-# Função principal para executar as operações desejadas
-def main():
-     create_table()
-    # insert_single_record()
-    # insert_multiple_records()
-    # fetch_data()
-    # fetch_data_with_condition()
-    # update_data()
-    # delete_data()
-    # drop_table()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, debug=True)
