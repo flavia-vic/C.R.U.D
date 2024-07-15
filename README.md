@@ -16,15 +16,18 @@ atualizar_estudante_no_banco(student_id, data): Atualiza um estudante específic
 deletar_estudante(student_id): Remove um estudante da tabela pelo ID fornecido.
 
 - Operação de Inserção:
+
 inserir_estudante(data): Insere um novo estudante na tabela com os dados fornecidos.
+
 Aplicação Flask (arquivo main.py)
+
 A aplicação Flask utiliza a classe Database para criar uma API RESTful que oferece os seguintes endpoints:
-/conectar (POST): Conecta-se ao banco de dados MySQL utilizando parâmetros fornecidos via POST.
-/ler (GET): Retorna todos os estudantes da tabela estudantes.
-/ler_por_pagina (GET): Retorna uma página específica de estudantes com paginação.
-/atualizar_estudante/<student_id> (PUT): Atualiza os dados de um estudante específico pelo ID.
-/deletar-por-id/<id> (DELETE): Remove um estudante da tabela pelo ID.
-/inserir-estudante (POST): Insere um novo estudante na tabela com os dados fornecidos via POST.
+- /conectar (POST): Conecta-se ao banco de dados MySQL utilizando parâmetros fornecidos via POST.
+- /ler (GET): Retorna todos os estudantes da tabela estudantes.
+- /ler_por_pagina (GET): Retorna uma página específica de estudantes com paginação.
+- /atualizar_estudante/<student_id> (PUT): Atualiza os dados de um estudante específico pelo ID.
+- /deletar-por-id/<id> (DELETE): Remove um estudante da tabela pelo ID.
+- /inserir-estudante (POST): Insere um novo estudante na tabela com os dados fornecidos via POST.
 
 ## Configuração e Execução
 Para executar o projeto localmente:
